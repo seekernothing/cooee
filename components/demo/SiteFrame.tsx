@@ -124,7 +124,10 @@ function SiteFrameInner({
           </div>
         </div>
 
-        <div className="relative aspect-[16/10] max-h-[68vh] w-full overflow-hidden bg-white">
+        {/* 16/11 is slightly taller than the old 16/10, so more of the
+            storefront shows without the frame turning boxy. min-h only kicks in
+            on viewports tall enough for it, so it can't fight the vh cap. */}
+        <div className="relative aspect-16/11 max-h-[82vh] w-full overflow-hidden bg-white sm:min-h-105 lg:min-h-125">
           {!loaded && (
             <div className="absolute inset-0 z-10 space-y-3 bg-white p-6">
               <Skeleton className="h-6 w-1/3" />

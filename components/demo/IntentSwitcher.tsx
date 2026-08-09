@@ -20,12 +20,48 @@ const INTENT_CAPTION: Record<Intent, string> = {
   high: "Ready to buy",
 };
 
-/** Static classes — the intent scale is ours, not the prospect's brand. */
-const INTENT_DOT: Record<Intent, string> = {
-  low: "bg-intent-low",
-  medium: "bg-intent-med",
-  high: "bg-intent-high",
+/**
+ * Static classes — the intent scale is ours, not the prospect's brand.
+ * Tailwind only emits classes it can see as literals, so each tier lists its
+ * full set rather than interpolating a name.
+ */
+interface TierStyle {
+  dot: string;
+  ink: string;
+  /** Selected-card surface + border. */
+  surface: string;
+  /** Filled segments of the strength meter. */
+  meter: string;
+  /** Left edge marker on the selected card. */
+  edge: string;
+}
+
+const TIER: Record<Intent, TierStyle> = {
+  low: {
+    dot: "bg-intent-low",
+    ink: "text-intent-low-ink",
+    surface: "border-intent-low bg-intent-low-tint",
+    meter: "bg-intent-low",
+    edge: "bg-intent-low",
+  },
+  medium: {
+    dot: "bg-intent-med",
+    ink: "text-intent-med-ink",
+    surface: "border-intent-med bg-intent-med-tint",
+    meter: "bg-intent-med",
+    edge: "bg-intent-med",
+  },
+  high: {
+    dot: "bg-intent-high",
+    ink: "text-intent-high-ink",
+    surface: "border-intent-high bg-intent-high-tint",
+    meter: "bg-intent-high",
+    edge: "bg-intent-high",
+  },
 };
+
+/** Filled segments out of 3 — gives the tier a non-colour cue. */
+const TIER_STRENGTH: Record<Intent, number> = { low: 1, medium: 2, high: 3 };
 
 const SURFACE_LABEL: Record<Campaign["surface"], string> = {
   announcement_bar: "Announcement bar",
@@ -60,50 +96,87 @@ export function IntentSwitcher({
           const campaign = campaigns.find((c) => c.intent === intent);
           const isActive = intent === active;
 
+          const tier = TIER[intent];
+          const strength = TIER_STRENGTH[intent];
+
           return (
             <button
               key={intent}
               role="tab"
               type="button"
               aria-selected={isActive}
+              aria-label={`${INTENT_LABEL[intent]} intent — ${INTENT_CAPTION[intent]}, strength ${strength} of 3`}
               onClick={() => onChange(intent)}
               className={cn(
-                "relative rounded-xl border px-4 py-3.5 text-left transition-colors",
+                "relative overflow-hidden rounded-xl border px-4 py-3.5 text-left transition-all",
                 isActive
-                  ? "border-rose bg-card shadow-soft"
-                  : "hover:bg-blush/50 border-transparent",
+                  ? cn(tier.surface, "shadow-soft")
+                  : "border-rose/70 bg-card hover:border-rose hover:shadow-soft",
               )}
             >
-              {isActive && !reduceMotion && (
+              {/* Selected tier gets a solid colour edge — a shape cue that
+                  survives greyscale and colour-blind viewing. */}
+              {isActive && (
                 <motion.span
-                  layoutId="intent-active"
+                  layoutId={reduceMotion ? undefined : "intent-active"}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="border-rose bg-card shadow-soft absolute inset-0 rounded-xl border"
+                  className={cn(
+                    "absolute inset-y-0 left-0 w-1 rounded-l-xl",
+                    tier.edge,
+                  )}
                 />
               )}
 
-              <span className="relative flex items-center gap-1.5">
-                <span
-                  className={cn("size-1.5 rounded-full", INTENT_DOT[intent])}
-                />
-                <span
-                  className={cn(
-                    "font-mono text-[11px] tracking-wider uppercase",
-                    isActive ? "text-plum" : "text-mauve",
-                  )}
-                >
-                  {INTENT_LABEL[intent]}
+              <span className="relative flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5">
+                  <span className={cn("size-2 rounded-full", tier.dot)} />
+                  <span
+                    className={cn(
+                      "font-mono text-[11px] font-semibold tracking-wider uppercase",
+                      isActive ? tier.ink : "text-mauve",
+                    )}
+                  >
+                    {INTENT_LABEL[intent]}
+                  </span>
+                </span>
+
+                {/* Strength meter: 1/2/3 filled bars. Encodes the tier without
+                    relying on colour at all. */}
+                <span className="flex items-end gap-0.5" aria-hidden="true">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className={cn(
+                        "w-1 rounded-full transition-colors",
+                        i === 0 ? "h-1.5" : i === 1 ? "h-2.5" : "h-3.5",
+                        i < strength
+                          ? tier.meter
+                          : isActive
+                            ? "bg-plum/15"
+                            : "bg-rose",
+                      )}
+                    />
+                  ))}
                 </span>
               </span>
 
-              <span className="relative mt-1 block text-xs text-balance">
-                <span className={isActive ? "text-plum" : "text-mauve"}>
+              <span className="relative mt-1.5 block text-xs text-balance">
+                <span
+                  className={cn(
+                    isActive ? "text-plum font-medium" : "text-mauve",
+                  )}
+                >
                   {INTENT_CAPTION[intent]}
                 </span>
               </span>
 
               {campaign && (
-                <span className="text-mauve relative mt-1.5 block truncate text-[11px]">
+                <span
+                  className={cn(
+                    "relative mt-1.5 block truncate text-[11px]",
+                    isActive ? "text-plum/70" : "text-mauve/80",
+                  )}
+                >
                   {SURFACE_LABEL[campaign.surface]}
                 </span>
               )}
@@ -117,8 +190,23 @@ export function IntentSwitcher({
 
 /** Trigger + rationale for the selected tier. */
 export function IntentDetail({ campaign }: { campaign: Campaign }) {
+  const tier = TIER[campaign.intent];
+
   return (
     <div className="space-y-4">
+      {/* Echoes the selected tab's colour so the panel is visibly bound to it. */}
+      <div className="flex items-center gap-2">
+        <span className={cn("size-2 rounded-full", tier.dot)} />
+        <span
+          className={cn(
+            "font-mono text-[11px] font-semibold tracking-wider uppercase",
+            tier.ink,
+          )}
+        >
+          {INTENT_LABEL[campaign.intent]} intent
+        </span>
+      </div>
+
       <div className="space-y-1.5">
         <p className="eyebrow">Fires when</p>
         <p className="text-plum text-sm leading-relaxed">{campaign.trigger}</p>

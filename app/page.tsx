@@ -4,9 +4,10 @@ import { useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 
 import { CooeeWidget, SampleDataNote } from "@/components/demo/CooeeWidget";
+import { GridBay } from "@/components/demo/GridBay";
 import { IntentDetail, IntentSwitcher } from "@/components/demo/IntentSwitcher";
 import { SiteFrame } from "@/components/demo/SiteFrame";
-import { Button } from "@/components/ui/button";
+import { CornerButton } from "@/components/ui/corner-button";
 import { Input } from "@/components/ui/input";
 import type { Campaign, CampaignSet } from "@/lib/campaign";
 import type { ShopifyProduct, CatalogStatus, Platform } from "@/lib/shopify";
@@ -36,6 +37,14 @@ const STAGES = [
   "Matching brand",
   "Writing campaigns",
 ] as const;
+
+function safeHost(origin: string): string {
+  try {
+    return new URL(origin).host;
+  } catch {
+    return origin;
+  }
+}
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -106,8 +115,8 @@ export default function Home() {
 
   return (
     <main className="porcelain-grain min-h-screen px-5 py-12 md:px-10 md:py-16">
-      <div className="mx-auto max-w-6xl space-y-12">
-        <header className="max-w-2xl space-y-5">
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center space-y-12">
+        <header className="flex max-w-2xl flex-col items-center space-y-5 text-center">
           <div className="intent-rail h-px w-24 rounded-full" />
           <p className="eyebrow">Demo generator</p>
           <h1 className="text-5xl md:text-6xl">
@@ -118,7 +127,10 @@ export default function Home() {
             Paste a store URL. Get personalised campaigns for every intent tier.
           </p>
 
-          <form onSubmit={handleGenerate} className="flex flex-col gap-2 sm:flex-row">
+          <form
+            onSubmit={handleGenerate}
+            className="flex w-full flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-center sm:gap-3"
+          >
             <Input
               type="text"
               inputMode="url"
@@ -127,12 +139,19 @@ export default function Home() {
               placeholder="allbirds.com"
               aria-label="Store URL"
               disabled={busy}
-              className="bg-card h-11 flex-1"
+              className="bg-card h-11 w-full sm:max-w-sm sm:flex-1"
             />
-            <Button
+            <CornerButton
               type="submit"
               disabled={busy || !url.trim()}
-              className="shadow-lacquer h-11 px-5"
+              accentColor="var(--lacquer)"
+              labelColor="#fff"
+              showIcon={false}
+              /* The wrapper adds its own padding for the corner animation, so
+                 the button is left to size itself — forcing a height here
+                 leaves a dead, unclickable ring around the visible button. */
+              className="whitespace-nowrap"
+              wrapperClassName="shrink-0"
             >
               {busy ? (
                 <>
@@ -145,11 +164,11 @@ export default function Home() {
                   <ArrowRight className="size-4" />
                 </>
               )}
-            </Button>
+            </CornerButton>
           </form>
 
           {busy && (
-            <ol className="space-y-1.5 pt-1">
+            <ol className="flex flex-col items-center space-y-1.5 pt-1">
               {STAGES.map((label, index) => {
                 const state =
                   stage === null || index > stage
@@ -193,63 +212,88 @@ export default function Home() {
         </header>
 
         {result && analysis && campaign && (
-          <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-            <div className="space-y-6">
-              <SiteFrame
-                origin={analysis.origin}
-                framingBlocked={analysis.framingBlocked}
-                note={campaign.badge ? <SampleDataNote /> : null}
-              >
-                <CooeeWidget
-                  campaign={campaign}
-                  brand={result.brand}
-                  products={analysis.products}
-                />
-              </SiteFrame>
+          /* The drafting sheet: every generated component is plated on the
+             blueprint field and registered with corner crosshairs. */
+          <section className="border-rose relative w-full rounded-2xl border p-4 md:p-8">
+            <span className="crosshair tl" aria-hidden="true" />
+            <span className="crosshair tr" aria-hidden="true" />
+            <span className="crosshair bl" aria-hidden="true" />
+            <span className="crosshair br" aria-hidden="true" />
 
-              <IntentSwitcher
-                campaigns={result.campaigns}
-                active={active}
-                onChange={setActive}
-              />
+            <div className="mb-5 flex items-baseline justify-between gap-3">
+              <span className="bay-label">Sheet 01 · Generated campaign</span>
+              <span className="bay-label text-mauve/60">
+                {safeHost(analysis.origin)}
+              </span>
             </div>
 
-            <aside className="space-y-6">
-              <div className="bg-card border-rose shadow-soft rounded-2xl border p-6">
-                <IntentDetail campaign={campaign} />
+            {/* The storefront column takes the surplus width; the rail stays a
+                fixed reading column so it doesn't stretch with the viewport. */}
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-8">
+              <div className="space-y-6">
+                <GridBay label="Fig. 01 — Storefront + widget" spec="Live frame">
+                  <SiteFrame
+                    origin={analysis.origin}
+                    framingBlocked={analysis.framingBlocked}
+                    note={campaign.badge ? <SampleDataNote /> : null}
+                  >
+                    <CooeeWidget
+                      campaign={campaign}
+                      brand={result.brand}
+                      products={analysis.products}
+                    />
+                  </SiteFrame>
+                </GridBay>
+
+                <GridBay label="Fig. 02 — Intent scale" spec="3 tiers">
+                  <IntentSwitcher
+                    campaigns={result.campaigns}
+                    active={active}
+                    onChange={setActive}
+                  />
+                </GridBay>
               </div>
 
-              <div className="bg-card border-rose shadow-soft space-y-3.5 rounded-2xl border p-6">
-                <p className="eyebrow">Brand read</p>
-                <p className="text-plum text-sm">
-                  {result.brand.name}
-                  <span className="text-mauve"> · {result.brand.tone}</span>
-                </p>
-                <div className="flex gap-2">
-                  {[result.brand.primary, result.brand.accent].map((hex) => (
-                    <div key={hex} className="flex items-center gap-1.5">
-                      <span
-                        className="border-rose size-4 rounded-full border"
-                        style={{ backgroundColor: hex }}
-                      />
-                      <span className="text-mauve font-mono text-[10px] uppercase">
-                        {hex}
-                      </span>
+              <aside className="space-y-6">
+                <GridBay label="Fig. 03 — Trigger spec">
+                  <div className="bg-card border-rose shadow-soft rounded-xl border p-5">
+                    <IntentDetail campaign={campaign} />
+                  </div>
+                </GridBay>
+
+                <GridBay label="Fig. 04 — Brand read">
+                  <div className="bg-card border-rose shadow-soft space-y-3.5 rounded-xl border p-5">
+                    <p className="text-plum text-sm">
+                      {result.brand.name}
+                      <span className="text-mauve"> · {result.brand.tone}</span>
+                    </p>
+                    <div className="flex gap-2">
+                      {[result.brand.primary, result.brand.accent].map((hex) => (
+                        <div key={hex} className="flex items-center gap-1.5">
+                          <span
+                            className="border-rose size-4 rounded-full border"
+                            style={{ backgroundColor: hex }}
+                          />
+                          <span className="text-mauve font-mono text-[10px] uppercase">
+                            {hex}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                {note && (
-                  <p className="text-mauve border-rose border-t pt-3 text-xs leading-relaxed">
-                    {note}
-                  </p>
-                )}
-              </div>
-            </aside>
+                    {note && (
+                      <p className="text-mauve border-rose border-t pt-3 text-xs leading-relaxed">
+                        {note}
+                      </p>
+                    )}
+                  </div>
+                </GridBay>
+              </aside>
+            </div>
           </section>
         )}
 
         {!result && !busy && (
-          <p className="text-mauve/70 text-sm">
+          <p className="text-mauve/70 text-center text-sm">
             Try a live Shopify store — allbirds.com, rothys.com.
           </p>
         )}

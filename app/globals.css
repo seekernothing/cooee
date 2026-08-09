@@ -43,10 +43,21 @@
   --color-plum: var(--plum);
   --color-mauve: var(--mauve);
 
-  /* Intent scale — the signature */
+  /* Intent scale — the signature.
+     Each tier carries three roles: `mark` (fills — dots, bars, rails),
+     `ink` (label text), `tint` (selected surface). All are contrast-checked;
+     see the ladder note in :root before changing any of them. */
   --color-intent-low: var(--intent-low);
   --color-intent-med: var(--intent-med);
   --color-intent-high: var(--intent-high);
+
+  --color-intent-low-ink: var(--intent-low-ink);
+  --color-intent-med-ink: var(--intent-med-ink);
+  --color-intent-high-ink: var(--intent-high-ink);
+
+  --color-intent-low-tint: var(--intent-low-tint);
+  --color-intent-med-tint: var(--intent-med-tint);
+  --color-intent-high-tint: var(--intent-high-tint);
 
   /* Radii */
   --radius-sm: calc(var(--radius) - 4px);
@@ -73,9 +84,22 @@
   --plum: #2a1620;
   --mauve: #8a6b75;
 
-  --intent-low: #c9b8be;
-  --intent-med: #e58aae;
-  --intent-high: #d6266d;
+  /* Intent ladder. The old scale varied only in saturation, so every tier read
+     as "faded lacquer" and low sat at 1.89:1 on the card — invisible. This one
+     moves through HUE (cool slate → warm ember → hot lacquer) *and* darkens
+     monotonically, so the tiers stay separable in greyscale and for colour-blind
+     readers. Marks clear 3:1 on the card, inks clear 4.5:1 on their tint. */
+  --intent-low: #7d8fa6;
+  --intent-med: #b8541f;
+  --intent-high: #a1104a;
+
+  --intent-low-ink: #3d4a5a;
+  --intent-med-ink: #8a4416;
+  --intent-high-ink: #a81551;
+
+  --intent-low-tint: #eef1f6;
+  --intent-med-tint: #fdf1e7;
+  --intent-high-tint: #fdeaf1;
 
   --background: #fdfbfa;
   --foreground: #2a1620;
@@ -106,9 +130,19 @@
   --plum: #f7ecef;
   --mauve: #b39aa3;
 
-  --intent-low: #6b555e;
-  --intent-med: #b85b80;
-  --intent-high: #f0428a;
+  /* Dark mode inverts the ladder — on a dark card, brightness carries emphasis,
+     so `high` is the most luminous rather than the deepest. */
+  --intent-low: #b4c4d6;
+  --intent-med: #d96b22;
+  --intent-high: #f76ea3;
+
+  --intent-low-ink: #c3d0df;
+  --intent-med-ink: #f2b183;
+  --intent-high-ink: #f9a7c6;
+
+  --intent-low-tint: #232a33;
+  --intent-med-tint: #2e2019;
+  --intent-high-tint: #331a24;
 
   --background: #160d11;
   --foreground: #f7ecef;
@@ -171,6 +205,84 @@
     transparent 0
   );
   background-size: 24px 24px;
+}
+
+/* ============================================
+   ARCHITECTURAL GRID
+   Blueprint drafting surface for generated output
+   ============================================ */
+
+/* Note: the drafting sheet is deliberately unruled. The crosshairs and dashed
+   bay rules carry the architectural read on their own; a tiled cell pattern
+   behind live storefront content fought it for attention. */
+
+/* Component bay — a drafted plate with measured margins. */
+@utility blueprint-bay {
+  position: relative;
+  border: 1px dashed var(--grid-rule);
+}
+
+/* Crosshair registration mark. Sits on a bay corner via the .tl/.tr/.bl/.br
+   modifiers; the arms are drawn with pseudo-elements so one node makes both. */
+@utility crosshair {
+  position: absolute;
+  width: var(--crosshair-size);
+  height: var(--crosshair-size);
+  pointer-events: none;
+  color: var(--grid-mark);
+}
+
+@layer base {
+  :root {
+    --grid-rule: rgb(138 107 117 / 0.34);
+    --grid-mark: rgb(214 38 109 / 0.55);
+    --crosshair-size: 13px;
+  }
+
+  .dark {
+    --grid-rule: rgb(179 154 163 / 0.32);
+    --grid-mark: rgb(240 66 138 / 0.6);
+  }
+
+  .crosshair::before,
+  .crosshair::after {
+    content: "";
+    position: absolute;
+    background-color: currentColor;
+  }
+  /* Horizontal arm */
+  .crosshair::before {
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    transform: translateY(-50%);
+  }
+  /* Vertical arm */
+  .crosshair::after {
+    left: 50%;
+    top: 0;
+    height: 100%;
+    width: 1px;
+    transform: translateX(-50%);
+  }
+
+  /* Corner placements — centred on the bay's corner, so the cross reads as a
+     registration mark straddling the edge rather than sitting inside it. */
+  .crosshair.tl { top: 0; left: 0; transform: translate(-50%, -50%); }
+  .crosshair.tr { top: 0; right: 0; transform: translate(50%, -50%); }
+  .crosshair.bl { bottom: 0; left: 0; transform: translate(-50%, 50%); }
+  .crosshair.br { bottom: 0; right: 0; transform: translate(50%, 50%); }
+}
+
+/* Drafting annotation — small mono label pinned to a bay. */
+@utility bay-label {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mauve);
 }
 
 @layer base {
